@@ -1,15 +1,13 @@
-from flask import  request, make_response, session, abort, jsonify, Flask, send_from_directory
+from flask import  request, make_response, session, abort, jsonify, Flask
 from flask_restful import Api, Resource
 from flask_login import current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.exceptions import NotFound, Unauthorized
-from models import User, UserFavorite, Location, Comment, Like, Photo, db
-from config import db, api, app, CORS, migrate, bcrypt, load_user
+from models import User, Recipe, Ingredient, RecipeIngredient, Category, RecipeCategory, db
+from config import db, api, app, CORS, migrate, bcrypt, load_user, login_manager
 import os
 
 from flask_login import LoginManager
-
-from config import app, api, db, migrate, bcrypt, CORS, login_manager
 
 login_manager.init_app(app)
 
@@ -170,6 +168,53 @@ class IngredientByID(Resource):
 
 api.add_resource(IngredientByID, '/ingredients/<int:id>')
 
+class RecipeIngredients(Resource):
+    def post(self, recipe_id):
+        user_id = get_jwt_identity()
+        
+        data = request.get_json()
+        ingredient_id = data.get('ingredient_id')
+        
+        ingredient = Ingredient.query.filter_by(id=ingredient_id).first()
+        if not ingredient:
+            return {'error': 'Ingredient not found'}, 404
+
+        recipe = Recipe.query.filter_by(id=recipe_id).first()
+        if not recipe:
+            return {'error': 'Recipe not found'}, 404
+
+        if recipe.user_id != user_id:
+            return {'error': 'Unauthorized'}, 401
+
+        recipe.ingredients.append(ingredient)
+        db.session.commit()
+        
+        return {'message': 'Ingredient added successfully'}, 200
+
+    def delete(self, recipe_id):
+        user_id = get_jwt_identity()
+        
+        data = request.get_json()
+        ingredient_id = data.get('ingredient_id')
+        
+        ingredient = Ingredient.query.filter_by(id=ingredient_id).first()
+        if not ingredient:
+            return {'error': 'Ingredient not found'}, 404
+
+        recipe = Recipe.query.filter_by(id=recipe_id).first()
+        if not recipe:
+            return {'error': 'Recipe not found'}, 404
+
+        if recipe.user_id != user_id:
+            return {'error': 'Unauthorized'}, 401
+
+        recipe.ingredients.remove(ingredient)
+        db.session.commit()
+        
+        return {'message': 'Ingredient removed successfully'}, 200
+
+api.add_resource(RecipeIngredients, '/recipes/<int:recipe_id>/ingredients')
+
 
 class Categories(Resource):
     def get(self):
@@ -216,6 +261,53 @@ class CategoryByID(Resource):
 
 api.add_resource(CategoryByID, '/categories/<int:id>')
 
+
+class RecipeCategories(Resource):
+    def post(self, recipe_id):
+        user_id = get_jwt_identity()
+
+        data = request.get_json()
+        category_id = data.get('category_id')
+
+        category = Category.query.filter_by(id=category_id).first()
+        if not category:
+            return {'error': 'Category not found'}, 404
+
+        recipe = Recipe.query.filter_by(id=recipe_id).first()
+        if not recipe:
+            return {'error': 'Recipe not found'}, 404
+
+        if recipe.user_id != user_id:
+            return {'error': 'Unauthorized'}, 401
+
+        recipe.categories.append(category)
+        db.session.commit()
+        
+        return {'message': 'Category added successfully'}, 200
+
+    def delete(self, recipe_id):
+        user_id = get_jwt_identity()
+
+        data = request.get_json()
+        category_id = data.get('category_id')
+
+        category = Category.query.filter_by(id=category_id).first()
+        if not category:
+            return {'error': 'Category not found'}, 404
+
+        recipe = Recipe.query.filter_by(id=recipe_id).first()
+        if not recipe:
+            return {'error': 'Recipe not found'}, 404
+
+        if recipe.user_id != user_id:
+            return {'error': 'Unauthorized'}, 401
+
+        recipe.categories.remove(category)
+        db.session.commit()
+        
+        return {'message': 'Category removed successfully'}, 200
+
+api.add_resource(RecipeCategories, '/recipes/<int:recipe_id>/categories')
 
 
 class Signup(Resource):
@@ -290,7 +382,6 @@ def handle_not_found(e):
     return response
 
 
-
 class UserRecipes(Resource):
     @jwt_required()
     def get(self, id):
@@ -305,61 +396,6 @@ class UserRecipes(Resource):
         return recipes, 200
 
 api.add_resource(UserRecipes, '/users/<int:id>/recipes')
-
-
-
-class RecipeIngredients(Resource):
-    @jwt_required()
-    def post(self, recipe_id):
-        user_id = get_jwt_identity()
-        
-        data = request.get_json()
-        ingredient_id = data.get('ingredient_id')
-        quantity = data.get('quantity')
-
-        ingredient = Ingredient.query.filter_by(id=ingredient_id).first()
-        if not ingredient:
-            return {'error': 'Ingredient not found'}, 404
-
-        recipe = Recipe.query.filter_by(id=recipe_id).first()
-        if not recipe:
-            return {'error': 'Recipe not found'}, 404
-
-        if recipe.user_id != user_id:
-            return {'error': 'Unauthorized'}, 401
-
-        recipe.ingredients.append(ingredient)
-        db.session.commit()
-        return {'message': 'Ingredient added successfully'}, 200
-
-api.add_resource(RecipeIngredients, '/recipes/<int:recipe_id>/ingredients')
-
-
-
-class RecipeCategories(Resource):
-    @jwt_required()
-    def post(self, recipe_id):
-        user_id = get_jwt_identity()
-
-        data = request.get_json()
-        category_id = data.get('category_id')
-
-        category = Category.query.filter_by(id=category_id).first()
-        if not category:
-            return {'error': 'Category not found'}, 404
-
-        recipe = Recipe.query.filter_by(id=recipe_id).first()
-        if not recipe:
-            return {'error': 'Recipe not found'}, 404
-
-        if recipe.user_id != user_id:
-            return {'error': 'Unauthorized'}, 401
-
-        recipe.categories.append(category)
-        db.session.commit()
-        return {'message': 'Category added successfully'}, 200
-
-api.add_resource(RecipeCategories, '/recipes/<int:recipe_id>/categories')
 
 
 if __name__ == '__main__':
