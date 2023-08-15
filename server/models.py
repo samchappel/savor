@@ -3,10 +3,9 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
-from sqlalchemy import CheckConstraint, Date, Enum, func, literal_column
+from sqlalchemy import CheckConstraint, func, literal_column
 from sqlalchemy.sql import select
 from flask_login import LoginManager
-from enum import Enum as PyEnum
 import re
 
 from config import bcrypt, db
@@ -73,7 +72,6 @@ class User(db.Model, SerializerMixin):
         return f'USER: ID: {self.id}, Name {self.name}, Email: {self.email}'
 
 
-
 class Recipe(db.Model, SerializerMixin):
     __tablename__ = 'recipes'
 
@@ -89,7 +87,6 @@ class Recipe(db.Model, SerializerMixin):
     recipe_category = db.relationship('RecipeCategory', back_populates='recipe')
 
     serialize_rules = ('-user', '-recipe_ingredients', '-recipe_category')
-
 
 
 class Ingredient(db.Model, SerializerMixin):
@@ -132,7 +129,6 @@ class Category(db.Model, SerializerMixin):
     recipe_category = db.relationship('RecipeCategory', back_populates='category')
 
     serialize_rules = ('-recipe_category')
-
 
 
 class RecipeCategory(db.Model, SerializerMixin):
